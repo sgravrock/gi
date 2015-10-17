@@ -27,19 +27,21 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	LineState state = { termwidth(), 0 };
-	size_t msgsize = state.width + 1;
-	char msg[msgsize];
-	concat_msg(msg, msgsize, argv + 1);
+	if (!getenv("STOP_REMINDING_ME_THAT_I_SUCK_AT_TYPING")) {
+		LineState state = { termwidth(), 0 };
+		size_t msgsize = state.width + 1;
+		char msg[msgsize];
+		concat_msg(msg, msgsize, argv + 1);
 
-	move_to_col(&state, 0);
-	print(&state, "gi");
-	marquee(&state, state.width - 1, 1, 10000, msg);
-	usleep(50000);
-	bounce(&state, msg);
-	usleep(50000);
-	spacegit(&state, msg);
-	printf("\n");
+		move_to_col(&state, 0);
+		print(&state, "gi");
+		marquee(&state, state.width - 1, 1, 10000, msg);
+		usleep(50000);
+		bounce(&state, msg);
+		usleep(50000);
+		spacegit(&state, msg);
+		printf("\n");
+	}
 
 	// abuse argv
 	argv[0] = "git";
