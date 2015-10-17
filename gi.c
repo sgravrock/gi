@@ -13,7 +13,7 @@ typedef struct {
 static int termwidth(void);
 static void concat_msg(char *buf, size_t bufsize, char **words);
 // All printing functions assume that msg does not contain escape sequences.
-static void marquee(LineState *state, int start_col, int end_col, const char *msg);
+static void marquee(LineState *state, int start_col, int end_col, useconds_t delay, const char *msg);
 static void bounce(LineState *state, const char *msg);
 static void spacegit(LineState *state, const char *msg);
 static void move_to_col(LineState *state, int col);
@@ -34,8 +34,8 @@ int main(int argc, char **argv) {
 
 	move_to_col(&state, 0);
 	print(&state, "gi");
-	marquee(&state, state.width - 1, 1, msg);
-	usleep(30000);
+	marquee(&state, state.width - 1, 1, 10000, msg);
+	usleep(50000);
 	bounce(&state, msg);
 	usleep(50000);
 	spacegit(&state, msg);
@@ -64,7 +64,7 @@ static void concat_msg(char *buf, size_t bufsize, char **words) {
 	}
 }
 
-static void marquee(LineState *state, int start_col, int end_col, const char *msg) {
+static void marquee(LineState *state, int start_col, int end_col, useconds_t delay, const char *msg) {
 	int delta = start_col < end_col ? 1 : -1;
 
 	for (int i = start_col; i != end_col; i += delta) {
@@ -79,18 +79,18 @@ static void marquee(LineState *state, int start_col, int end_col, const char *ms
 		print(state, msg);
 
 		fflush(stdout);
-		usleep(20000);
+		usleep(delay);
 	}
 }
 
 static void bounce(LineState *state, const char *msg) {
 	for (int i = 0; i < 3; i++) {
 		// gi        t<command>
-		marquee(state, 2, 10, msg);
+		marquee(state, 2, 10, 20000, msg);
 		usleep(500000);
 
 		// git<command>
-		marquee(state, 10, 1, msg);
+		marquee(state, 10, 1, 10000, msg);
 	}
 }
 
