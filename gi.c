@@ -1,3 +1,4 @@
+#define _BSD_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +14,7 @@ typedef struct {
 static int termwidth(void);
 static void concat_msg(char *buf, size_t bufsize, char **words);
 // All printing functions assume that msg does not contain escape sequences.
-static void marquee(LineState *state, int start_col, int end_col, useconds_t delay, const char *msg);
+static void marquee(LineState *state, int start_col, int end_col, unsigned long delay, const char *msg);
 static void bounce(LineState *state, const char *msg);
 static void spacegit(LineState *state, const char *msg);
 static void move_to_col(LineState *state, int col);
@@ -66,7 +67,7 @@ static void concat_msg(char *buf, size_t bufsize, char **words) {
 	}
 }
 
-static void marquee(LineState *state, int start_col, int end_col, useconds_t delay, const char *msg) {
+static void marquee(LineState *state, int start_col, int end_col, unsigned long delay, const char *msg) {
 	int delta = start_col < end_col ? 1 : -1;
 
 	for (int i = start_col; i != end_col; i += delta) {
