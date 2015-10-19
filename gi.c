@@ -12,6 +12,8 @@ typedef struct {
 } LineState;
 
 static bool cowsay(char **argv);
+static void exec_cowsay(int *pipefds);
+static bool consume_cowsay(int *pipefds, pid_t pid, char **argv);
 
 static void animate(char **argv);
 static int termwidth(void);
@@ -59,45 +61,53 @@ static bool cowsay(char **argv) {
 		perror("fork");
 		return false;
 	} else if (pid == 0) {
-		close(pipefds[1]);
-
-		if (dup2(pipefds[0], 0) < 0) {
-			exit(EXIT_FAILURE);
-		}
-
-		execlp("cowsay", "cowsay", NULL);
-		exit(EXIT_FAILURE);
+		exec_cowsay(pipefds);
+		exit(EXIT_FAILURE); // unreached unless exec fails
 	} else {
-		close(pipefds[0]);
-		FILE *pp = fdopen(pipefds[1], "w");
-
-		if (!pp) {
-			perror("fdopen");
-			return false;
-		}
-
-		fputs("I think you meant git ", pp);
-		fputs(argv[1] + 1, pp); // "tfoo" -> "foo"
-
-		for (char **words = argv + 2; *words; words++) {
-			fprintf(pp, "%s ", *words);
-			fprintf(stderr, "%s \n", *words);
-		}
-
-		if (fclose(pp) != 0) {
-			perror("Error writing to cowsay");
-		}
-
-		int status;
-		waitpid(pid, &status, 0);
-
-		if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-			return false;
-		}
-
-		sleep(1);
-		return true;
+		return consume_cowsay(pipefds, pid, argv);
 	}
+}
+
+static void exec_cowsay(int *pipefds) {
+	close(pipefds[1]);
+
+	if (dup2(pipefds[0], 0) < 0) {
+		exit(EXIT_FAILURE);
+	}
+
+	execlp("cowsay", "cowsay", NULL);
+}
+
+static bool consume_cowsay(int *pipefds, pid_t pid, char **argv) {
+	close(pipefds[0]);
+	FILE *pp = fdopen(pipefds[1], "w");
+
+	if (!pp) {
+		perror("fdopen");
+		return false;
+	}
+
+	fputs("I think you meant git ", pp);
+	fputs(argv[1] + 1, pp); // "tfoo" -> "foo"
+
+	for (char **words = argv + 2; *words; words++) {
+		fprintf(pp, "%s ", *words);
+		fprintf(stderr, "%s \n", *words);
+	}
+
+	if (fclose(pp) != 0) {
+		perror("Error writing to cowsay");
+	}
+
+	int status;
+	waitpid(pid, &status, 0);
+
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+		return false;
+	}
+
+	sleep(1);
+	return true;
 }
 
 static void animate(char **argv) {
