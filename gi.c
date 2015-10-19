@@ -2,15 +2,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
 typedef struct {
-        int width;
-        int col;
+	int width;
+	int col;
 } LineState;
 
+static bool cowsay(char **argv);
 
+static void animate(char **argv);
 static int termwidth(void);
 static void concat_msg(char *buf, size_t bufsize, char **words);
 // All printing functions assume that msg does not contain escape sequences.
@@ -29,19 +32,9 @@ int main(int argc, char **argv) {
 	}
 
 	if (!getenv("STOP_REMINDING_ME_THAT_I_SUCK_AT_TYPING")) {
-		LineState state = { termwidth(), 0 };
-		size_t msgsize = state.width + 1;
-		char msg[msgsize];
-		concat_msg(msg, msgsize, argv + 1);
-
-		move_to_col(&state, 0);
-		print(&state, "gi");
-		marquee(&state, state.width - 1, 1, 10000, msg);
-		usleep(50000);
-		bounce(&state, msg);
-		usleep(50000);
-		spacegit(&state, msg);
-		printf("\n");
+		if (!cowsay(argv)) {
+			animate(argv);
+		}
 	}
 
 	// abuse argv
@@ -50,6 +43,77 @@ int main(int argc, char **argv) {
 	execvp("git", argv);
 	perror("Couldn't exec git");
 	return EXIT_FAILURE;
+}
+
+static bool cowsay(char **argv) {
+	int pipefds[2];
+
+	if (pipe(pipefds) < 0) {
+		perror("pipe");
+		return false;
+	}
+
+	pid_t pid = fork();
+
+	if (pid < 0) {
+		perror("fork");
+		return false;
+	} else if (pid == 0) {
+		close(pipefds[1]);
+
+		if (dup2(pipefds[0], 0) < 0) {
+			exit(EXIT_FAILURE);
+		}
+
+		execlp("cowsay", "cowsay", NULL);
+		exit(EXIT_FAILURE);
+	} else {
+		close(pipefds[0]);
+		FILE *pp = fdopen(pipefds[1], "w");
+
+		if (!pp) {
+			perror("fdopen");
+			return false;
+		}
+
+		fputs("I think you meant git ", pp);
+		fputs(argv[1] + 1, pp); // "tfoo" -> "foo"
+
+		for (char **words = argv + 2; *words; words++) {
+			fprintf(pp, "%s ", *words);
+			fprintf(stderr, "%s \n", *words);
+		}
+
+		if (fclose(pp) != 0) {
+			perror("Error writing to cowsay");
+		}
+
+		int status;
+		waitpid(pid, &status, 0);
+
+		if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+			return false;
+		}
+
+		sleep(1);
+		return true;
+	}
+}
+
+static void animate(char **argv) {
+	LineState state = { termwidth(), 0 };
+	size_t msgsize = state.width + 1;
+	char msg[msgsize];
+	concat_msg(msg, msgsize, argv + 1);
+
+	move_to_col(&state, 0);
+	print(&state, "gi");
+	marquee(&state, state.width - 1, 1, 10000, msg);
+	usleep(50000);
+	bounce(&state, msg);
+	usleep(50000);
+	spacegit(&state, msg);
+	printf("\n");
 }
 
 static int termwidth(void) {
