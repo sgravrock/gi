@@ -75,7 +75,13 @@ static void exec_cowsay(int *pipefds) {
 		exit(EXIT_FAILURE);
 	}
 
-	execlp("cowsay", "cowsay", NULL);
+	char *cowfile = getenv("GI_COWFILE");
+
+	if (cowfile && cowfile[0] != '\0') {
+		execlp("cowsay", "cowsay", "-f", cowfile, NULL);
+	} else {
+		execlp("cowsay", "cowsay", NULL);
+	}
 }
 
 static bool consume_cowsay(int *pipefds, pid_t pid, char **argv) {
