@@ -98,8 +98,7 @@ static bool consume_cowsay(int *pipefds, pid_t pid, char **argv) {
 	fputs(argv[1] + 1, pp); // "tfoo" -> "foo"
 
 	for (char **words = argv + 2; *words; words++) {
-		fprintf(pp, "%s ", *words);
-		fprintf(stderr, "%s \n", *words);
+		fprintf(pp, " %s", *words);
 	}
 
 	if (fclose(pp) != 0) {
